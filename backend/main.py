@@ -1,6 +1,8 @@
 import os
 import json
 import re
+import googlemaps 
+from datetime import datetime
 from datetime import date
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
@@ -9,22 +11,25 @@ from dotenv import load_dotenv
 import google.generativeai as genai
 from googleapiclient.discovery import build
 
+# --- IMPORT DATABASE FUNCTIONS ---
+from database.database import add_expense, get_user_expenses, add_assignment, get_assignments
+
 # --- SETUP ---
 load_dotenv()
 YOUTUBE_API_KEY = os.getenv("YOUTUBE_API_KEY")
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
+MAPS_API_KEY = os.getenv("MAPS_API_KEY") 
+gmaps = googlemaps.Client(key=MAPS_API_KEY) if MAPS_API_KEY else None
 
-# Configure AI
 if GEMINI_API_KEY:
     genai.configure(api_key=GEMINI_API_KEY)
     model = genai.GenerativeModel('gemini-flash-latest')
 
 app = FastAPI()
 
-# FIX: Allow ALL origins to prevent CORS errors if port changes
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"], 
+    allow_origins=["*"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -35,8 +40,11 @@ class VideoRequest(BaseModel):
     title: str
     channel: str
 
+# UPDATED: Now accepts academic context
 class SkillRequest(BaseModel):
     skill: str
+    user_degree: str = "General"
+    user_year: str = "Student"
 
 class ExpenseRequest(BaseModel):
     user_id: str
@@ -46,12 +54,7 @@ class ExpenseRequest(BaseModel):
 
 class AssignmentText(BaseModel):
     text: str
-
-# --- MOCK DATABASE ---
-mock_expenses_db = [
-    {"user_id": "student1", "category": "Food", "amount": 150, "date": "2026-01-12"},
-    {"user_id": "student1", "category": "Travel", "amount": 50, "date": "2026-01-13"},
-]
+    user_id: str = "student1" # Default if not provided
 
 # --- ENDPOINTS ---
 
@@ -74,7 +77,6 @@ def search_videos(query: str):
         
         videos = []
         for item in response.get("items", []):
-            # FIX: Safety check in case YouTube returns a channel/playlist instead of video
             if "videoId" in item["id"]:
                 videos.append({
                     "id": item["id"]["videoId"],
@@ -85,76 +87,80 @@ def search_videos(query: str):
         return {"videos": videos}
     except Exception as e:
         print(f"YouTube Error: {e}")
-        return {"videos": []} # Return empty list instead of crashing
+        return {"videos": []}
 
 # 2. AI VIDEO SUMMARY
 @app.post("/api/ai/explain")
 def explain_video(request: VideoRequest):
     try:
         prompt = f"""
-        I am a student. Summarize this video titled "{request.title}" by "{request.channel}" 
-        into 3 bullet points of what I will learn. Keep it encouraging.
+        I am a university student. Summarize this video titled "{request.title}" by "{request.channel}" 
+        into 3 bullet points of what I will learn. Keep it educational and concise.
         """
         response = model.generate_content(prompt)
         return {"summary": response.text}
     except Exception as e:
         return {"summary": "Could not generate summary."}
 
-# 3. SKILL SYLLABUS GENERATOR
+# 3. SKILL SYLLABUS GENERATOR (ACADEMIC AWARE)
 @app.post("/api/ai/syllabus")
 def generate_syllabus(request: SkillRequest):
     try:
+        # LOGIC: Adjust difficulty based on Year
+        difficulty_note = "Start from basics."
+        if "3rd" in request.user_year or "4th" in request.user_year:
+            difficulty_note = "Skip basics. Focus on advanced concepts, industry applications, and complex projects."
+        
         prompt = f"""
+        Act as a Professor for {request.user_degree} students.
         Create a 4-week study syllabus for "{request.skill}".
+        
+        CONTEXT: The student is in {request.user_year}. {difficulty_note}
+        
         Return ONLY raw JSON with this structure (no markdown):
         {{
-            "title": "Mastering {request.skill}",
+            "title": "Mastering {request.skill} ({request.user_degree} Edition)",
             "weeks": [
-                {{"week": 1, "topic": "Basics", "details": "Focus on..."}},
-                {{"week": 2, "topic": "Intermediate", "details": "Learn about..."}},
-                {{"week": 3, "topic": "Advanced", "details": "Deep dive into..."}},
-                {{"week": 4, "topic": "Project", "details": "Build a..."}}
+                {{"week": 1, "topic": "...", "details": "..."}},
+                {{"week": 2, "topic": "...", "details": "..."}},
+                {{"week": 3, "topic": "...", "details": "..."}},
+                {{"week": 4, "topic": "...", "details": "..."}}
             ]
         }}
         """
         response = model.generate_content(prompt)
         text = response.text
         
-        # FIX: Robust JSON Extraction
         match = re.search(r"\{.*\}", text, re.DOTALL)
         if match:
-            clean_json = match.group(0)
-            return json.loads(clean_json)
+            return json.loads(match.group(0))
         else:
             raise ValueError("No JSON found")
             
     except Exception as e:
         print(f"Syllabus Error: {e}")
-        # Return error structure so frontend handles it gracefully
         return {"error": True, "title": "Could not generate plan", "weeks": []}
 
-# 4. FINANCE TRACKER
+# 4. FINANCE TRACKER (CONNECTED TO DB)
 @app.get("/api/finance/expenses")
-def get_expenses(user_id: str):
-    user_expenses = [e for e in mock_expenses_db if e['user_id'] == user_id]
+def get_expenses_api(user_id: str):
+    user_expenses = get_user_expenses(user_id)
     total = sum(e['amount'] for e in user_expenses)
     return {"expenses": user_expenses, "total": total}
 
 @app.post("/api/finance/add")
-def add_expense(expense: ExpenseRequest):
-    # FIX: Pydantic v2 compatibility (dict() vs model_dump())
-    try:
-        entry = expense.model_dump()
-    except AttributeError:
-        entry = expense.dict()
-        
-    mock_expenses_db.append(entry)
+def add_expense_api(expense: ExpenseRequest):
+    add_expense(
+        user_id=expense.user_id,
+        amount=expense.amount,
+        category=expense.category,
+        date=expense.date
+    )
     
-    # Sarcastic AI Advice
     try:
         if expense.amount > 500:
             advice = model.generate_content(
-                f"I am a student. I just spent {expense.amount} rupess on {expense.category}. Give me a sarcastic 1-sentence financial roast."
+                f"I just spent {expense.amount} on {expense.category}. Give me a sarcastic 1-sentence financial roast."
             ).text
         else:
             advice = "Expense recorded."
@@ -163,15 +169,15 @@ def add_expense(expense: ExpenseRequest):
 
     return {"message": "Success", "ai_comment": advice}
 
-# 5. ASSIGNMENT PARSER (WITH DATES)
+# 5. ASSIGNMENT PARSER (CONNECTED TO DB)
 @app.post("/api/ai/parse-assignment")
 def parse_assignment(request: AssignmentText):
     try:
         today_str = date.today().strftime("%Y-%m-%d")
         prompt = f"""
-        Extract assignments from this text: "{request.text}"
+        Extract assignments from: "{request.text}"
         Today is {today_str}.
-        Convert relative dates like "tomorrow" or "next friday" into YYYY-MM-DD.
+        Convert relative dates (tomorrow, next friday) into YYYY-MM-DD.
         Return ONLY raw JSON:
         [
             {{"subject": "Subject", "task": "Details", "due_date": "YYYY-MM-DD"}}
@@ -181,14 +187,100 @@ def parse_assignment(request: AssignmentText):
         response = model.generate_content(prompt)
         text = response.text
         
-        # FIX: Robust JSON Extraction
         match = re.search(r"\[.*\]", text, re.DOTALL)
         if match:
-            clean_json = match.group(0)
-            return {"tasks": json.loads(clean_json)}
+            tasks = json.loads(match.group(0))
+            
+            # Save to DB using the user_id sent from frontend
+            for t in tasks:
+                add_assignment(
+                    user_id=request.user_id, 
+                    title=t['task'],
+                    subject=t['subject'],
+                    deadline=t['due_date'],
+                    source="whatsapp_parser"
+                )
+            
+            return {"tasks": tasks}
         else:
             return {"tasks": []}
             
     except Exception as e:
         print(f"Parser Error: {e}")
         return {"tasks": []}
+
+# 6. GET ASSIGNMENTS
+@app.get("/api/assignments")
+def get_assignments_api(user_id: str):
+    tasks = get_assignments(user_id)
+    return {"assignments": tasks}
+
+# --- FEATURE 4: STUDY SCHEDULER (WITH MAPS) ---
+
+class ScheduleRequest(BaseModel):
+    user_id: str
+    home_location: str
+    college_location: str
+    college_start: str # e.g. "09:00"
+    college_end: str   # e.g. "17:00"
+
+@app.post("/api/scheduler/generate")
+def generate_schedule(request: ScheduleRequest):
+    commute_minutes = 30 # Default fallback
+    commute_text = "30 mins"
+
+    # 1. CALCULATE COMMUTE (Real Google Maps Data)
+    if gmaps:
+        try:
+            # We ask Maps: "How long to drive from Home to College now?"
+            directions = gmaps.distance_matrix(
+                origins=request.home_location,
+                destinations=request.college_location,
+                mode="driving",
+                departure_time=datetime.now()
+            )
+            # Extract the time (in text, e.g., "45 mins")
+            element = directions['rows'][0]['elements'][0]
+            if element['status'] == 'OK':
+                commute_seconds = element['duration']['value']
+                commute_minutes = int(commute_seconds / 60)
+                commute_text = element['duration']['text']
+        except Exception as e:
+            print(f"Maps Error: {e}")
+
+    # 2. GENERATE AI ROUTINE
+    try:
+        prompt = f"""
+        Create a daily routine for a university student.
+        
+        CONTEXT:
+        - College Hours: {request.college_start} to {request.college_end}
+        - Commute Time (One way): {commute_text}.
+        - Goal: Balance study, skill learning, and health.
+        
+        INSTRUCTIONS:
+        - Suggest specific activities for the commute (e.g., "Listen to podcast").
+        - Allocate time for "Deep Work" and "Exercise".
+        - Return ONLY raw JSON in this format:
+        {{
+            "commute_summary": "Your commute is {commute_text}.",
+            "routine": [
+                {{"time": "07:00 - 08:00", "activity": "Wake up & Exercise", "type": "health"}},
+                {{"time": "08:00 - 09:00", "activity": "Commute ({commute_text}) - Listen to Audio Notes", "type": "commute"}},
+                {{"time": "...", "activity": "...", "type": "work/study/break"}}
+            ]
+        }}
+        """
+        response = model.generate_content(prompt)
+        text = response.text
+        
+        # Clean JSON
+        match = re.search(r"\{.*\}", text, re.DOTALL)
+        if match:
+            return json.loads(match.group(0))
+        else:
+            raise ValueError("No JSON found")
+            
+    except Exception as e:
+        print(f"Scheduler Error: {e}")
+        return {"error": True}
