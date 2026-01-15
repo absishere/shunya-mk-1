@@ -120,7 +120,34 @@ function App() {
     } catch (e) { console.error(e); }
     setParsing(false);
   }
+=======
 
+    setLoading(false);
+  };
+
+  // 🤖 GEMINI EXPLAIN
+  const explainVideo = async (videoId, title, channel) => {
+    setSummaryLoading(videoId);
+    setActiveSummary(null);
+
+    try {
+      const response = await fetch("http://localhost:8000/api/ai/explain", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ title, channel }),
+      });
+
+      const data = await response.json();
+      setActiveSummary({ id: videoId, text: data.summary });
+    } catch (error) {
+      console.error("AI Error:", error);
+    }
+>>>>>>> Stashed changes
+
+    setSummaryLoading(null);
+  };
+
+  // ✅ MAIN DASHBOARD (AFTER LOGIN)
   return (
     <div style={{ maxWidth: '900px', margin: '0 auto', padding: '20px' }}>
       
@@ -251,7 +278,7 @@ function App() {
       )}
 
     </div>
-  )
+  );
 }
 
-export default App
+export default App;
