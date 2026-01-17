@@ -30,13 +30,10 @@ app = FastAPI()
 # --- CORS ---
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[
-        "http://localhost:5173",
-        "https://shunya-mk-1.vercel.app"
-    ],
+    allow_origins=["*"],  # ALLOW ALL ORIGINS (Fixes the blocking issue)
     allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
+    allow_methods=["*"],  # ALLOW ALL METHODS (POST, GET, OPTIONS, etc.)
+    allow_headers=["*"],  # ALLOW ALL HEADERS
 )
 
 # --- DATA MODELS ---
