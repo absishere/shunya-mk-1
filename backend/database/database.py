@@ -8,19 +8,41 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
+# --- HELPER: Fixes the "Invalid JWT / MalformedFraming" error ---
+def repair_and_load_key(file_path):
+    """
+    Reads a JSON file, fixes the newline characters in the private_key,
+    and returns a credential object.
+    """
+    try:
+        with open(file_path, "r") as f:
+            creds_dict = json.load(f)
+        
+        # The Magic Fix: Convert literal "\n" to actual newlines
+        if "private_key" in creds_dict:
+            creds_dict["private_key"] = creds_dict["private_key"].replace("\\n", "\n")
+            
+        return credentials.Certificate(creds_dict)
+    except Exception as e:
+        print(f"⚠️ Failed to repair key at {file_path}: {e}")
+        return None
+
 # =========================
 # FIREBASE INITIALIZATION
 # =========================
 
 if not firebase_admin._apps:
-    # 1. PRIORITY: Check for Render Secret File (Best for Production)
+    cred = None
+    
+    # 1. PRIORITY: Check for Render Secret File (Production)
     if os.path.exists("/etc/secrets/serviceAccountKey.json"):
-        cred = credentials.Certificate("/etc/secrets/serviceAccountKey.json")
-        firebase_admin.initialize_app(cred)
-        print("✅ Firebase initialized from Render Secret File")
+        print("🔄 Attempting to load Render Secret File...")
+        cred = repair_and_load_key("/etc/secrets/serviceAccountKey.json")
+        if cred:
+            print("✅ Firebase initialized from Render Secret File")
 
-    # 2. FALLBACK: Check for Environment Variable (If Secret File fails)
-    elif os.getenv("FIREBASE_CREDENTIALS"):
+    # 2. FALLBACK: Check for Environment Variable
+    if not cred and os.getenv("FIREBASE_CREDENTIALS"):
         try:
             creds_dict = json.loads(os.getenv("FIREBASE_CREDENTIALS"))
             if "private_key" in creds_dict:
@@ -31,13 +53,17 @@ if not firebase_admin._apps:
         except Exception as e:
             print(f"❌ Error loading Firebase Env Var: {e}")
 
-    # 3. LOCAL: Check for local file (For Localhost)
-    elif os.path.exists("serviceAccountKey.json"):
-        cred = credentials.Certificate("serviceAccountKey.json")
-        firebase_admin.initialize_app(cred)
-        print("✅ Firebase initialized from local file")
+    # 3. LOCAL: Check for local file (Localhost)
+    if not cred and os.path.exists("serviceAccountKey.json"):
+        print("🔄 Attempting to load Local File...")
+        cred = repair_and_load_key("serviceAccountKey.json")
+        if cred:
+            print("✅ Firebase initialized from local file")
 
-    else:
+    # Final Init
+    if cred and not firebase_admin._apps:
+        firebase_admin.initialize_app(cred)
+    elif not firebase_admin._apps:
         print("❌ CRITICAL ERROR: No Firebase credentials found!")
 
 db = firestore.client()
