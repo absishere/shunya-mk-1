@@ -12,31 +12,33 @@ load_dotenv()
 # FIREBASE INITIALIZATION
 # =========================
 
-# Check if app is already initialized to prevent double-init errors
 if not firebase_admin._apps:
-    # 1. Try to get credentials from Environment Variable (Production/Render)
-    firebase_creds = os.getenv("FIREBASE_CREDENTIALS")
-
-    if firebase_creds:
-        # Load the JSON string
-        creds_dict = json.loads(firebase_creds)
-        
-        # 🚨 CRITICAL FIX for Render: Replace literal \n with actual newlines
-        if "private_key" in creds_dict:
-            creds_dict["private_key"] = creds_dict["private_key"].replace("\\n", "\n")
-        
-        cred = credentials.Certificate(creds_dict)
+    # 1. PRIORITY: Check for Render Secret File (Best for Production)
+    if os.path.exists("/etc/secrets/serviceAccountKey.json"):
+        cred = credentials.Certificate("/etc/secrets/serviceAccountKey.json")
         firebase_admin.initialize_app(cred)
-        print("✅ Firebase initialized from Environment Variable")
-        
-    # 2. Fallback: Try local file (Localhost development)
+        print("✅ Firebase initialized from Render Secret File")
+
+    # 2. FALLBACK: Check for Environment Variable (If Secret File fails)
+    elif os.getenv("FIREBASE_CREDENTIALS"):
+        try:
+            creds_dict = json.loads(os.getenv("FIREBASE_CREDENTIALS"))
+            if "private_key" in creds_dict:
+                creds_dict["private_key"] = creds_dict["private_key"].replace("\\n", "\n")
+            cred = credentials.Certificate(creds_dict)
+            firebase_admin.initialize_app(cred)
+            print("✅ Firebase initialized from Environment Variable")
+        except Exception as e:
+            print(f"❌ Error loading Firebase Env Var: {e}")
+
+    # 3. LOCAL: Check for local file (For Localhost)
     elif os.path.exists("serviceAccountKey.json"):
         cred = credentials.Certificate("serviceAccountKey.json")
         firebase_admin.initialize_app(cred)
         print("✅ Firebase initialized from local file")
-        
+
     else:
-        print("❌ ERROR: No Firebase credentials found! Check Render Environment Variables.")
+        print("❌ CRITICAL ERROR: No Firebase credentials found!")
 
 db = firestore.client()
 
@@ -46,13 +48,11 @@ db = firestore.client()
 # =========================
 
 def verify_firebase_token(id_token: str) -> str:
-    """Verifies Firebase ID token and returns user_id (uid)"""
     decoded_token = auth.verify_id_token(id_token)
     return decoded_token["uid"]
 
 
 def create_user_if_not_exists(user_id: str, email: str):
-    """Creates user document in Firestore if it does not exist"""
     user_ref = db.collection("users").document(user_id)
     if not user_ref.get().exists:
         user_ref.set({
@@ -77,14 +77,18 @@ def add_expense(user_id: str, amount: float, category: str, date: str, note: str
 
 
 def get_user_expenses(user_id: str):
-    expenses_ref = (
-        db.collection("users")
-        .document(user_id)
-        .collection("expenses")
-        .order_by("createdAt", direction=firestore.Query.DESCENDING)
-        .stream()
-    )
-    return [doc.to_dict() for doc in expenses_ref]
+    try:
+        expenses_ref = (
+            db.collection("users")
+            .document(user_id)
+            .collection("expenses")
+            .order_by("createdAt", direction=firestore.Query.DESCENDING)
+            .stream()
+        )
+        return [doc.to_dict() for doc in expenses_ref]
+    except Exception as e:
+        print(f"Error fetching expenses: {e}")
+        return []
 
 
 # =========================
@@ -104,8 +108,11 @@ def save_video(user_id: str, youtube_id: str, title: str, custom_title: str, cha
 
 
 def get_saved_videos(user_id: str):
-    videos_ref = db.collection("users").document(user_id).collection("saved_videos").stream()
-    return [doc.to_dict() for doc in videos_ref]
+    try:
+        videos_ref = db.collection("users").document(user_id).collection("saved_videos").stream()
+        return [doc.to_dict() for doc in videos_ref]
+    except:
+        return []
 
 
 # =========================
@@ -123,8 +130,11 @@ def save_roadmap(user_id: str, skill_name: str, syllabus_json: dict):
 
 
 def get_skill_roadmaps(user_id: str):
-    roadmaps_ref = db.collection("users").document(user_id).collection("skill_roadmaps").stream()
-    return [doc.to_dict() for doc in roadmaps_ref]
+    try:
+        roadmaps_ref = db.collection("users").document(user_id).collection("skill_roadmaps").stream()
+        return [doc.to_dict() for doc in roadmaps_ref]
+    except:
+        return []
 
 
 # =========================
@@ -143,11 +153,14 @@ def add_assignment(user_id: str, title: str, subject: str, deadline: str, source
 
 
 def get_assignments(user_id: str):
-    assignments_ref = (
-        db.collection("users")
-        .document(user_id)
-        .collection("assignments")
-        .order_by("deadline")
-        .stream()
-    )
-    return [doc.to_dict() for doc in assignments_ref]
+    try:
+        assignments_ref = (
+            db.collection("users")
+            .document(user_id)
+            .collection("assignments")
+            .order_by("deadline")
+            .stream()
+        )
+        return [doc.to_dict() for doc in assignments_ref]
+    except:
+        return []
