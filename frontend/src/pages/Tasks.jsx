@@ -9,49 +9,67 @@ export default function Tasks({ user }) {
   const [parsing, setParsing] = useState(false)
 
   const fetchTasks = async () => {
-    if (!user) return;
+    if (!user) return
 
     setLoading(true)
 
+    const controller = new AbortController()
+    const timeoutId = setTimeout(() => controller.abort(), 15000) // ⏱️ 15s timeout
+
     try {
       const res = await fetch(
-        `https://shunya-backend-bhi0.onrender.com/api/assignments?user_id=${user.uid}`
-      );
+        `https://shunya-backend-bhi0.onrender.com/api/assignments?user_id=${user.uid}`,
+        { signal: controller.signal }
+      )
 
       if (!res.ok) {
-        throw new Error("Failed to fetch tasks");
+        throw new Error("Failed to fetch tasks")
       }
 
-      const data = await res.json();
-      setSavedTasks(data.assignments || []);
+      const data = await res.json()
+      setSavedTasks(data.assignments || [])
 
     } catch (e) {
-      console.error("Tasks fetch error:", e);
+      if (e.name === "AbortError") {
+        console.warn("Tasks request timed out")
+      } else {
+        console.error("Tasks fetch error:", e)
+      }
     } finally {
-      setLoading(false);   // ✅ always executes
+      clearTimeout(timeoutId)
+      setLoading(false)   // ✅ always exits loading state
     }
-  };
-
+  }
 
   // Auto-load tasks
   useEffect(() => {
-    if (user) fetchTasks();
-  }, [user]);
+    if (user) fetchTasks()
+  }, [user])
 
   const parseText = async () => {
-    if (!rawText || !user) return;
-    setParsing(true);
+    if (!rawText || !user) return
+
+    setParsing(true)
+
     try {
-      const res = await fetch('https://shunya-backend-bhi0.onrender.com/api/ai/parse-assignment', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ text: rawText, user_id: user.uid })
-      });
-      const data = await res.json();
-      setParsedTasks(data.tasks || []);
-      fetchTasks();
-    } catch (e) { console.error(e); }
-    setParsing(false);
+      const res = await fetch(
+        'https://shunya-backend-bhi0.onrender.com/api/ai/parse-assignment',
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ text: rawText, user_id: user.uid })
+        }
+      )
+
+      const data = await res.json()
+      setParsedTasks(data.tasks || [])
+      fetchTasks()
+
+    } catch (e) {
+      console.error("Parse error:", e)
+    }
+
+    setParsing(false)
   }
 
   return (
@@ -73,15 +91,18 @@ export default function Tasks({ user }) {
             {/* Parser Card */}
             <div className="card" style={{ height: 'fit-content' }}>
               <h3>📥 WhatsApp Parser</h3>
+
               <p style={{ fontSize: '0.9rem', color: 'var(--text-muted)' }}>
                 Paste your messy group chat messages here.
               </p>
+
               <textarea
                 value={rawText}
                 onChange={e => setRawText(e.target.value)}
                 style={{ height: '150px', marginTop: '10px', resize: 'none' }}
                 placeholder="e.g. 'Maths assignment due tomorrow and Physics lab on Friday'"
               />
+
               <button
                 className="btn btn-primary"
                 style={{ width: '100%', marginTop: '15px' }}
@@ -134,9 +155,14 @@ export default function Tasks({ user }) {
                       className="btn btn-ghost"
                       style={{ fontSize: '0.8rem', padding: '4px 8px', marginTop: '5px' }}
                       onClick={() => {
-                        const title = encodeURIComponent(t.subject + ": " + t.title);
-                        const d = t.deadline ? t.deadline.replace(/-/g, '') : "";
-                        if (d) window.open(`https://calendar.google.com/calendar/render?action=TEMPLATE&text=${title}&dates=${d}/${d}`, '_blank');
+                        const title = encodeURIComponent(t.subject + ": " + t.title)
+                        const d = t.deadline ? t.deadline.replace(/-/g, '') : ""
+                        if (d) {
+                          window.open(
+                            `https://calendar.google.com/calendar/render?action=TEMPLATE&text=${title}&dates=${d}/${d}`,
+                            '_blank'
+                          )
+                        }
                       }}
                     >
                       Add to Cal
@@ -149,7 +175,6 @@ export default function Tasks({ user }) {
         )}
 
       </div>
-
     </div>
   )
 }

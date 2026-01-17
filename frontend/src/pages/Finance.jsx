@@ -10,62 +10,80 @@ export default function Finance({ user }) {
   const [aiAdvice, setAiAdvice] = useState("")
 
   const fetchExpenses = async () => {
-    if (!user) return;
+    if (!user) return
 
     setLoading(true)
 
+    const controller = new AbortController()
+    const timeoutId = setTimeout(() => controller.abort(), 15000) // ⏱️ 15s timeout
+
     try {
       const res = await fetch(
-        `https://shunya-backend-bhi0.onrender.com/api/finance/expenses?user_id=${user.uid}`
-      );
+        `https://shunya-backend-bhi0.onrender.com/api/finance/expenses?user_id=${user.uid}`,
+        { signal: controller.signal }
+      )
 
       if (!res.ok) {
-        throw new Error("Failed to fetch expenses");
+        throw new Error("Failed to fetch expenses")
       }
 
-      const data = await res.json();
-      setExpenses(data.expenses || []);
-      setTotalSpent(data.total || 0);
+      const data = await res.json()
+      setExpenses(data.expenses || [])
+      setTotalSpent(data.total || 0)
 
     } catch (e) {
-      console.error("Finance fetch error:", e);
+      if (e.name === "AbortError") {
+        console.warn("Finance request timed out")
+      } else {
+        console.error("Finance fetch error:", e)
+      }
     } finally {
-      setLoading(false);   // ✅ always executes
+      clearTimeout(timeoutId)
+      setLoading(false)   // ✅ always exits loading state
     }
-  };
-
+  }
 
   // Auto-load on mount
   useEffect(() => {
-    if (user) fetchExpenses();
-  }, [user]);
+    if (user) fetchExpenses()
+  }, [user])
 
   const addExpense = async () => {
-    if (!amountInput || !user) return;
-    setAiAdvice("Analyzing...");
+    if (!amountInput || !user) return
+
+    setAiAdvice("Saving...")
+
     try {
-      const res = await fetch('https://shunya-backend-bhi0.onrender.com/api/finance/add', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          user_id: user.uid,
-          category: categoryInput,
-          amount: parseFloat(amountInput),
-          date: new Date().toISOString().split('T')[0]
-        })
-      });
-      const data = await res.json();
-      setAiAdvice(data.ai_comment);
-      setAmountInput("");
-      fetchExpenses();
-    } catch (e) { console.error(e); }
+      const res = await fetch(
+        'https://shunya-backend-bhi0.onrender.com/api/finance/add',
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            user_id: user.uid,
+            category: categoryInput,
+            amount: parseFloat(amountInput),
+            date: new Date().toISOString().split('T')[0]
+          })
+        }
+      )
+
+      const data = await res.json()
+      setAiAdvice(data.ai_comment || "Saved.")
+      setAmountInput("")
+      fetchExpenses()
+
+    } catch (e) {
+      console.error("Add expense error:", e)
+      setAiAdvice("Saved.")
+    }
   }
 
   return (
     <div>
       <div className="header-section">
         <h1 className="page-title">Expense Tracker</h1>
-        <p className="page-subtitle">Track spending and get AI financial advice.</p>
+        <p className="page-subtitle">Track spending and get insights.</p>
       </div>
 
       <div className="grid-2">
@@ -80,33 +98,41 @@ export default function Finance({ user }) {
             {/* Input Card */}
             <div className="card">
               <h3>Add Expense</h3>
+
               <div style={{ display: 'flex', flexDirection: 'column', gap: '15px', marginTop: '20px' }}>
-                <select value={categoryInput} onChange={e => setCategoryInput(e.target.value)}>
+                <select
+                  value={categoryInput}
+                  onChange={e => setCategoryInput(e.target.value)}
+                >
                   <option>Food</option>
                   <option>Transport</option>
                   <option>Education</option>
                   <option>Fun</option>
                 </select>
+
                 <input
                   type="number"
                   value={amountInput}
                   onChange={e => setAmountInput(e.target.value)}
                   placeholder="Amount (₹)"
                 />
+
                 <button className="btn btn-primary" onClick={addExpense}>
                   Track Expense
                 </button>
               </div>
 
               {aiAdvice && (
-                <div style={{
-                  marginTop: '20px',
-                  padding: '15px',
-                  background: 'rgba(99, 102, 241, 0.1)',
-                  border: '1px solid var(--primary)',
-                  borderRadius: '8px',
-                  color: '#a5b4fc'
-                }}>
+                <div
+                  style={{
+                    marginTop: '20px',
+                    padding: '15px',
+                    background: 'rgba(99, 102, 241, 0.1)',
+                    border: '1px solid var(--primary)',
+                    borderRadius: '8px',
+                    color: '#a5b4fc'
+                  }}
+                >
                   🤖 {aiAdvice}
                 </div>
               )}
@@ -114,12 +140,14 @@ export default function Finance({ user }) {
 
             {/* History Card */}
             <div className="card">
-              <div style={{
-                display: 'flex',
-                justifyContent: 'space-between',
-                alignItems: 'center',
-                marginBottom: '20px'
-              }}>
+              <div
+                style={{
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  alignItems: 'center',
+                  marginBottom: '20px'
+                }}
+              >
                 <h3>History</h3>
                 <span className="tag" style={{ background: 'var(--accent)', color: 'white' }}>
                   Total: ₹{totalSpent}
@@ -132,6 +160,7 @@ export default function Finance({ user }) {
                     No expenses yet.
                   </div>
                 )}
+
                 {expenses.map((e, i) => (
                   <div
                     key={i}
@@ -159,7 +188,6 @@ export default function Finance({ user }) {
         )}
 
       </div>
-
     </div>
   )
 }
