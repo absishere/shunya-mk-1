@@ -119,6 +119,15 @@ body::after {
   box-shadow: 0 4px 12px rgba(0,0,0,0.1);
 }
 
+.nav-inner {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 14px 18px;
+  border-radius: var(--radius-lg);
+  width: 100%;
+}
+
 .user-profile {
   margin-top: auto;
   padding: 16px;
@@ -328,4 +337,50 @@ input:focus, select:focus, textarea:focus {
   .card {
     padding: 22px;
   }
+}
+
+/* --- SKELETON LOADER --- */
+
+.skeleton {
+  position: relative;
+  overflow: hidden;
+  background: rgba(255,255,255,0.04);
+  border-radius: 12px;
+}
+
+.skeleton::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  transform: translateX(-100%);
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(255,255,255,0.12),
+    transparent
+  );
+  animation: shimmer 1.4s infinite;
+}
+
+@keyframes shimmer {
+  100% {
+    transform: translateX(100%);
+  }
+}
+
+/* Skeleton sizing helpers */
+.skeleton-line {
+  height: 12px;
+  border-radius: 6px;
+  margin-bottom: 10px;
+}
+
+.skeleton-title {
+  height: 22px;
+  width: 60%;
+  margin-bottom: 16px;
+}
+
+.skeleton-card {
+  height: 180px;
 }

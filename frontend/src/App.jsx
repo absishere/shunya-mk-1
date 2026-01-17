@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
-import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom'
+import { BrowserRouter as Router, Routes, Route, Navigate, useLocation } from 'react-router-dom'
+import { AnimatePresence, motion } from 'framer-motion'
 import { onAuthStateChanged } from 'firebase/auth'
 import { doc, getDoc } from 'firebase/firestore'
 import { auth, db } from './firebaseConfig'
@@ -17,6 +18,33 @@ import Skills from './pages/Skills'
 import Finance from './pages/Finance'
 import Planner from './pages/Planner'
 import Tasks from './pages/Tasks'
+
+function AnimatedRoutes({ user, profile }) {
+  const location = useLocation()
+
+  return (
+    <AnimatePresence mode="wait">
+      <motion.div
+        key={location.pathname}
+        initial={{ opacity: 0, y: 12 }}
+        animate={{ opacity: 1, y: 0 }}
+        exit={{ opacity: 0, y: -12 }}
+        transition={{ duration: 0.35, ease: "easeOut" }}
+        style={{ height: "100%" }}
+      >
+        <Routes location={location}>
+          <Route path="/" element={<Dashboard user={user} profile={profile} />} />
+          <Route path="/learning" element={<Learning user={user} profile={profile} />} />
+          <Route path="/skills" element={<Skills user={user} profile={profile} />} />
+          <Route path="/finance" element={<Finance user={user} />} />
+          <Route path="/planner" element={<Planner user={user} />} />
+          <Route path="/tasks" element={<Tasks user={user} />} />
+          <Route path="*" element={<Navigate to="/" />} />
+        </Routes>
+      </motion.div>
+    </AnimatePresence>
+  )
+}
 
 function App() {
   const [user, setUser] = useState(null)
@@ -49,17 +77,12 @@ function App() {
     <Router>
       <div className="app-container">
         <Sidebar user={user} profile={profile} />
-        
+
         <main className="main-content">
-          <Routes>
-            <Route path="/" element={<Dashboard user={user} profile={profile} />} />
-            <Route path="/learning" element={<Learning user={user} profile={profile} />} />
-            <Route path="/skills" element={<Skills user={user} profile={profile} />} />
-            <Route path="/finance" element={<Finance user={user} />} />
-            <Route path="/planner" element={<Planner user={user} />} />
-            <Route path="/tasks" element={<Tasks user={user} />} />
-            <Route path="*" element={<Navigate to="/" />} />
-          </Routes>
+          <AnimatedRoutes
+            user={user}
+            profile={profile}
+          />
         </main>
       </div>
     </Router>

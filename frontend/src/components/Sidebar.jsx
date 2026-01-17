@@ -1,8 +1,15 @@
 import { NavLink } from 'react-router-dom'
 import { signOut } from 'firebase/auth'
+import { motion } from 'framer-motion'
 import { auth } from '../firebaseConfig'
 
-// Icons (You can expand this list)
+const spring = {
+  type: "spring",
+  stiffness: 260,
+  damping: 24
+}
+
+// Icons unchanged
 const Icons = {
   Home: () => <svg className="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path><polyline points="9 22 9 12 15 12 15 22"></polyline></svg>,
   Youtube: () => <svg className="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M22.54 6.42a2.78 2.78 0 0 0-1.94-2C18.88 4 12 4 12 4s-6.88 0-8.6.46a2.78 2.78 0 0 0-1.94 2A29 29 0 0 0 1 11.75a29 29 0 0 0 .46 5.33A2.78 2.78 0 0 0 3.4 19c1.72.46 8.6.46 8.6.46s6.88 0 8.6-.46a2.78 2.78 0 0 0 1.94-2 29 29 0 0 0 .46-5.25 29 29 0 0 0-.46-5.33z"></path><polygon points="9.75 15.02 15.5 11.75 9.75 8.48 9.75 15.02"></polygon></svg>,
@@ -16,41 +23,56 @@ export default function Sidebar({ user, profile }) {
   const handleLogout = () => signOut(auth)
 
   return (
-    <aside className="sidebar">
+    <motion.aside 
+      className="sidebar"
+      initial={{ x: -40, opacity: 0 }}
+      animate={{ x: 0, opacity: 1 }}
+      transition={spring}
+    >
       <div className="brand">
-        {/* Just text/emoji, no inline styles needed, handled by CSS now */}
-        <span style={{ fontSize: '1.8rem', marginRight: '10px' }}>🚀</span> Shunya
+        🚀 <span>Shunya</span>
       </div>
 
       <nav className="nav-menu">
-        <NavLink to="/" className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}>
-          <Icons.Home /> Dashboard
-        </NavLink>
-        <NavLink to="/learning" className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}>
-          <Icons.Youtube /> Learning
-        </NavLink>
-        <NavLink to="/skills" className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}>
-          <Icons.Brain /> Skill Plan
-        </NavLink>
-        <NavLink to="/finance" className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}>
-          <Icons.Wallet /> Finance
-        </NavLink>
-        <NavLink to="/planner" className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}>
-          <Icons.Map /> Commute
-        </NavLink>
-        <NavLink to="/tasks" className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}>
-          <Icons.Task /> Tasks
-        </NavLink>
+        {[
+          { to: "/", label: "Dashboard", icon: <Icons.Home /> },
+          { to: "/learning", label: "Learning", icon: <Icons.Youtube /> },
+          { to: "/skills", label: "Skill Plan", icon: <Icons.Brain /> },
+          { to: "/finance", label: "Finance", icon: <Icons.Wallet /> },
+          { to: "/planner", label: "Commute", icon: <Icons.Map /> },
+          { to: "/tasks", label: "Tasks", icon: <Icons.Task /> },
+        ].map(item => (
+          <NavLink key={item.to} to={item.to} className="nav-item">
+            {({ isActive }) => (
+              <motion.div
+                className="nav-inner"
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.96 }}
+                animate={{
+                  backgroundColor: isActive ? "rgba(255,255,255,0.12)" : "rgba(255,255,255,0)"
+                }}
+                transition={spring}
+              >
+                {item.icon}
+                <span>{item.label}</span>
+              </motion.div>
+            )}
+          </NavLink>
+        ))}
       </nav>
 
-      <div className="user-profile">
-        <img src={user.photoURL} className="user-avatar" alt="User" />
-        <div style={{ flex: 1, overflow: 'hidden' }}>
-          <div style={{ fontSize: '0.9rem', fontWeight: '600' }}>{user.displayName}</div>
+      <motion.div 
+        className="user-profile"
+        whileHover={{ scale: 1.03 }}
+        transition={spring}
+      >
+        <img src={user.photoURL} className="user-avatar" />
+        <div style={{ flex: 1 }}>
+          <div style={{ fontSize: '0.9rem', fontWeight: 600 }}>{user.displayName}</div>
           <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>{profile?.year}</div>
         </div>
-        <button onClick={handleLogout} className="btn-ghost" style={{ padding: '8px' }}>Log Out</button>
-      </div>
-    </aside>
+        <button onClick={handleLogout} className="btn-ghost">Logout</button>
+      </motion.div>
+    </motion.aside>
   )
 }
