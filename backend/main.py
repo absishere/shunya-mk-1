@@ -14,6 +14,8 @@ from googleapiclient.discovery import build
 # --- IMPORT DATABASE FUNCTIONS ---
 from database.database import add_expense, get_user_expenses, add_assignment, get_assignments
 
+from fastapi.middleware.cors import CORSMiddleware
+
 # --- SETUP ---
 load_dotenv()
 YOUTUBE_API_KEY = os.getenv("YOUTUBE_API_KEY")
@@ -26,10 +28,12 @@ if GEMINI_API_KEY:
     model = genai.GenerativeModel('gemini-flash-latest')
 
 app = FastAPI()
-
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=[
+        "http://localhost:5173",
+        "https://shunya-mk-1.vercel.app/"
+    ],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -158,13 +162,16 @@ def add_expense_api(expense: ExpenseRequest):
     )
     
     try:
-        if expense.amount > 500:
-            advice = model.generate_content(
-                f"I just spent {expense.amount} on {expense.category}. Give me a sarcastic 1-sentence financial roast."
-            ).text
+        if expense.amount > 500 and model:
+            response = model.generate_content(
+                f"I just spent {expense.amount} on {expense.category}. Give me a sarcastic 1-sentence financial roast.",
+                generation_config={"max_output_tokens": 40},
+            )
+            advice = response.text
         else:
             advice = "Expense recorded."
-    except:
+    except Exception as e:
+        print("Gemini error:", e)
         advice = "Expense recorded."
 
     return {"message": "Success", "ai_comment": advice}

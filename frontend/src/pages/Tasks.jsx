@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react'
 import SkeletonCard from '../components/SkeletonCard'
 
 export default function Tasks({ user }) {
-  const [loading, setLoading] = useState(false)
+  const [loading, setLoading] = useState(true)
   const [rawText, setRawText] = useState("")
   const [parsedTasks, setParsedTasks] = useState([])
   const [savedTasks, setSavedTasks] = useState([])

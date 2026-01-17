@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react'
 import SkeletonCard from '../components/SkeletonCard'
 
 export default function Finance({ user }) {
-  const [loading, setLoading] = useState(false)
+  const [loading, setLoading] = useState(true)
   const [expenses, setExpenses] = useState([])
   const [totalSpent, setTotalSpent] = useState(0)
   const [amountInput, setAmountInput] = useState("")
