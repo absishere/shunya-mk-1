@@ -9,22 +9,19 @@ export default function Finance({ user }) {
   const [categoryInput, setCategoryInput] = useState("Food")
   const [aiAdvice, setAiAdvice] = useState("")
 
+  // Robust fetch function without aggressive timeouts
   const fetchExpenses = async () => {
     if (!user) return
 
     setLoading(true)
 
-    const controller = new AbortController()
-    const timeoutId = setTimeout(() => controller.abort(), 15000) // ⏱️ 15s timeout
-
     try {
       const res = await fetch(
-        `https://shunya-backend-bhi0.onrender.com/api/finance/expenses?user_id=${user.uid}`,
-        { signal: controller.signal }
+        `https://shunya-backend-bhi0.onrender.com/api/finance/expenses?user_id=${user.uid}`
       )
 
       if (!res.ok) {
-        throw new Error("Failed to fetch expenses")
+        throw new Error(`Server returned ${res.status}`)
       }
 
       const data = await res.json()
@@ -32,14 +29,13 @@ export default function Finance({ user }) {
       setTotalSpent(data.total || 0)
 
     } catch (e) {
-      if (e.name === "AbortError") {
-        console.warn("Finance request timed out")
-      } else {
-        console.error("Finance fetch error:", e)
-      }
+      console.error("Finance fetch error:", e)
+      // On error, set empty state so the UI doesn't break
+      setExpenses([])
+      setTotalSpent(0)
     } finally {
-      clearTimeout(timeoutId)
-      setLoading(false)   // ✅ always exits loading state
+      // ✅ Crucial: This ensures the Skeleton loader ALWAYS disappears
+      setLoading(false)
     }
   }
 
@@ -68,14 +64,18 @@ export default function Finance({ user }) {
         }
       )
 
+      if (!res.ok) throw new Error("Failed to save")
+
       const data = await res.json()
       setAiAdvice(data.ai_comment || "Saved.")
       setAmountInput("")
+      
+      // Refresh the list
       fetchExpenses()
 
     } catch (e) {
       console.error("Add expense error:", e)
-      setAiAdvice("Saved.")
+      setAiAdvice("Error saving. Try again.")
     }
   }
 
@@ -157,7 +157,7 @@ export default function Finance({ user }) {
               <div style={{ maxHeight: '400px', overflowY: 'auto' }}>
                 {expenses.length === 0 && (
                   <div style={{ padding: '20px', textAlign: 'center', color: 'var(--text-muted)' }}>
-                    No expenses yet.
+                    No expenses recorded yet.
                   </div>
                 )}
 

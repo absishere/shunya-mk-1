@@ -8,36 +8,30 @@ export default function Tasks({ user }) {
   const [savedTasks, setSavedTasks] = useState([])
   const [parsing, setParsing] = useState(false)
 
+  // Robust fetch function - NO 15s TIMEOUT
   const fetchTasks = async () => {
     if (!user) return
 
     setLoading(true)
 
-    const controller = new AbortController()
-    const timeoutId = setTimeout(() => controller.abort(), 15000) // ⏱️ 15s timeout
-
     try {
       const res = await fetch(
-        `https://shunya-backend-bhi0.onrender.com/api/assignments?user_id=${user.uid}`,
-        { signal: controller.signal }
+        `https://shunya-backend-bhi0.onrender.com/api/assignments?user_id=${user.uid}`
       )
 
       if (!res.ok) {
-        throw new Error("Failed to fetch tasks")
+        throw new Error(`Server returned ${res.status}`)
       }
 
       const data = await res.json()
       setSavedTasks(data.assignments || [])
 
     } catch (e) {
-      if (e.name === "AbortError") {
-        console.warn("Tasks request timed out")
-      } else {
-        console.error("Tasks fetch error:", e)
-      }
+      console.error("Tasks fetch error:", e)
+      setSavedTasks([])
     } finally {
-      clearTimeout(timeoutId)
-      setLoading(false)   // ✅ always exits loading state
+      // ✅ Crucial: This ensures the Skeleton loader ALWAYS disappears
+      setLoading(false)
     }
   }
 
@@ -63,6 +57,7 @@ export default function Tasks({ user }) {
 
       const data = await res.json()
       setParsedTasks(data.tasks || [])
+      // Refresh list after parsing
       fetchTasks()
 
     } catch (e) {
