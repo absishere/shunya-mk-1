@@ -1,7 +1,7 @@
 import os
 import json
 import googlemaps
-from datetime import datetime
+from datetime import date, datetime
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
@@ -101,7 +101,7 @@ def explain_video(request: VideoRequest):
         return {"summary": "Gemini API Key missing on server."}
     
     try:
-        model = genai.GenerativeModel("gemini-1.5-flash")
+        model = genai.GenerativeModel("gemini-flash-latest")
         prompt = f"Summarize this YouTube video topic in 3 bullet points. Title: {request.title}, Channel: {request.channel}"
         response = model.generate_content(prompt)
         return {"summary": response.text}
@@ -115,7 +115,7 @@ def generate_syllabus(request: SkillRequest):
         return {"title": "Error", "weeks": []}
     
     try:
-        model = genai.GenerativeModel("gemini-1.5-flash")
+        model = genai.GenerativeModel("gemini-flash-latest")
         prompt = f"""
         Create a 4-week study syllabus for {request.skill}. 
         The student is in {request.user_year} of {request.user_degree}.
@@ -153,8 +153,33 @@ def get_assignments_api(user_id: str):
 
 @app.post("/api/ai/parse-assignment")
 def parse_assignment(request: AssignmentText):
-    # Basic logic for now - expand with AI if needed
-    return {"tasks": []}
+    if not GEMINI_API_KEY:
+        return {"tasks": []}
+
+    try:
+        model = genai.GenerativeModel("gemini-flash-latest")
+        prompt = f"""
+        Extract tasks from this text: "{request.text}"
+        Return ONLY valid JSON in this format:
+        {{
+            "tasks": [
+                {{"subject": "Subject Name", "title": "Task Title", "deadline": "YYYY-MM-DD"}}
+            ]
+        }}
+        If date is missing, use today's date ({date.today()}).
+        """
+        response = model.generate_content(prompt)
+        clean_text = response.text.replace("```json", "").replace("```", "")
+        
+        # Save to DB automatically
+        data = json.loads(clean_text)
+        for t in data.get("tasks", []):
+            add_assignment(request.user_id, t["title"], t["subject"], t["deadline"], "whatsapp_parse")
+            
+        return data
+    except Exception as e:
+        print(f"Parser Error: {e}")
+        return {"tasks": []}
 
 @app.post("/api/scheduler/generate")
 def generate_schedule(request: ScheduleRequest):
