@@ -1,42 +1,33 @@
-#root {
-  max-width: 1280px;
-  margin: 0 auto;
-  padding: 2rem;
-  text-align: center;
+.app-container { height: 100vh; display: flex; flex-direction: column; }
+
+.viewport {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding-top: 70px;
 }
 
-.logo {
-  height: 6em;
-  padding: 1.5em;
-  will-change: filter;
-  transition: filter 300ms;
-}
-.logo:hover {
-  filter: drop-shadow(0 0 2em #646cffaa);
-}
-.logo.react:hover {
-  filter: drop-shadow(0 0 2em #61dafbaa);
+.hero-title { font-size: 3rem; font-weight: 200; letter-spacing: -1px; }
+.hero-subtitle { color: var(--text-muted); margin-top: 15px; }
+
+.content-window { width: 100%; max-width: 900px; padding: 40px; }
+.view-header { font-size: 0.8rem; letter-spacing: 4px; color: var(--accent-primary); margin-bottom: 20px; }
+
+.glass-panel {
+  background: var(--glass);
+  backdrop-filter: blur(25px);
+  border: 1px solid var(--glass-border);
+  border-radius: 30px;
+  padding: 40px;
+  box-shadow: 0 20px 50px rgba(0,0,0,0.3);
 }
 
-@keyframes logo-spin {
-  from {
-    transform: rotate(0deg);
-  }
-  to {
-    transform: rotate(360deg);
-  }
-}
+.big-price { font-size: 4.5rem; font-weight: 800; color: var(--rupee-gold); margin: 10px 0; }
+.status-pill { display: inline-block; padding: 6px 15px; background: rgba(59, 130, 246, 0.1); border: 1px solid var(--accent-primary); border-radius: 50px; font-size: 0.75rem; font-weight: 700; }
 
-@media (prefers-reduced-motion: no-preference) {
-  a:nth-of-type(2) .logo {
-    animation: logo-spin infinite 20s linear;
-  }
-}
+.roadmap-grid { display: flex; flex-direction: column; gap: 20px; margin-top: 20px; }
+.bar { height: 6px; background: rgba(255,255,255,0.05); border-radius: 3px; margin-top: 8px; }
+.fill { height: 100%; background: var(--accent-primary); border-radius: 3px; }
 
-.card {
-  padding: 2em;
-}
-
-.read-the-docs {
-  color: #888;
-}
+.placeholder-msg { text-align: center; color: var(--text-muted); font-style: italic; }

@@ -1,39 +1,69 @@
-import { useState } from 'react'
-import './App.css'
+import { useState } from 'react';
+import AuthPage from './components/AuthPage';
+import ActionSlider from './components/ActionSlider';
+import './App.css';
 
 function App() {
-  const [data, setData] = useState(null)
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const [activeTab, setActiveTab] = useState(null);
+  const priceUSD = 240;
 
-  // This function calls your Python Backend
-  const fetchData = async () => {
-    try {
-      // We are calling the endpoint we defined in main.py
-      const response = await fetch('http://localhost:8000/api/test');
-      const result = await response.json();
-      setData(result); // Save the python data to React state
-    } catch (error) {
-      console.error("Error connecting to backend:", error);
-    }
-  }
+  const toINR = (usd) => 
+    new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR' }).format(usd * 83.50);
+
+  if (!isLoggedIn) return <AuthPage onLogin={() => setIsLoggedIn(true)} />;
 
   return (
-    <div style={{ textAlign: 'center', marginTop: '50px' }}>
-      <h1>Student Assistant Dashboard</h1>
+    <div className="app-container">
+      <ActionSlider 
+        activeTab={activeTab} 
+        onSelect={setActiveTab} 
+        onLogout={() => setIsLoggedIn(false)}
+      />
 
-      <button onClick={fetchData} style={{ padding: '10px 20px', fontSize: '16px' }}>
-        Test Connection
-      </button>
+      <main className="viewport">
+        {!activeTab ? (
+          <div className="hero-section animate-fade">
+            <h1 className="hero-title">What can I help you with today?</h1>
+            <p className="hero-subtitle">Open the menu to access your student intelligence suite.</p>
+          </div>
+        ) : (
+          <div className="content-window animate-fade">
+            <h2 className="view-header">{activeTab.toUpperCase()} MANAGER</h2>
+            
+            {activeTab === 'finance' && (
+              <div className="glass-panel">
+                <h3>Current Budget</h3>
+                <p className="big-price">{toINR(priceUSD)}</p>
+                <div className="status-pill">₹20K PRIZE READY</div>
+              </div>
+            )}
 
-      {data && (
-        <div style={{ marginTop: '20px', padding: '20px', border: '1px solid #ccc' }}>
-          <h3>Result from Python:</h3>
-          <p>Status: <strong>{data.status}</strong></p>
-          <p>Project: {data.project}</p>
-          <p>Days Left: {data.days_left}</p>
-        </div>
-      )}
+            {activeTab === 'skills' && (
+              <div className="glass-panel">
+                <h3>Skill Development Roadmap</h3>
+                <div className="roadmap-grid">
+                  {['AI Ethics', 'React Advanced'].map((s, i) => (
+                    <div key={i} className="skill-card">
+                      <span>{s}</span>
+                      <div className="bar"><div className="fill" style={{width: `${85 - i*15}%`}}></div></div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Added Placeholder for Academic & Study Managers */}
+            {(activeTab === 'study' || activeTab === 'assignments' || activeTab === 'resources') && (
+              <div className="glass-panel placeholder-msg">
+                <p>Module Initializing... Connect with Python Backend to sync real-time academic data.</p>
+              </div>
+            )}
+          </div>
+        )}
+      </main>
     </div>
-  )
+  );
 }
 
-export default App
+export default App;
