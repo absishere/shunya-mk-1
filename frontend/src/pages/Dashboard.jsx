@@ -1,6 +1,8 @@
 import { Link } from 'react-router-dom'
+import { useNavigate } from 'react-router-dom'
 
 export default function Dashboard({ user, profile }) {
+  const navigate = useNavigate()
   const hour = new Date().getHours()
   const greeting = hour < 12 ? "Good morning" : hour < 18 ? "Good afternoon" : "Good evening"
 
@@ -17,46 +19,43 @@ export default function Dashboard({ user, profile }) {
       {/* Quick Actions Grid */}
       <h3 style={{ marginBottom: '20px' }}>Quick Actions</h3>
       
-      {/* ADDED: style={{ marginBottom: '40px' }} to force space below the grid */}
       <div className="grid-3" style={{ marginBottom: '40px' }}>
         
-        {/* WRAPPER DIV 1: This acts as the stable Grid Item */}
-        <div style={{ height: '100%' }}>
-            <Link to="/learning" style={{ textDecoration: 'none', display: 'block', height: '100%' }}>
-                <div className="card" style={{ height: '100%', transition: 'transform 0.2s', cursor: 'pointer', marginBottom: 0 }}>
-                    <div style={{ fontSize: '2rem', marginBottom: '10px' }}>📺</div>
-                    <h3 style={{ margin: 0, color: 'var(--text-main)' }}>Resume Learning</h3>
-                    <p style={{ fontSize: '0.9rem', color: 'var(--text-muted)' }}>
-                        Find tutorials for {profile?.degree || "your course"}.
-                    </p>
-                </div>
-            </Link>
+        {/* Using div onClick for better layout stability */}
+        <div 
+            className="card" 
+            onClick={() => navigate('/learning')}
+            style={{ height: '100%', cursor: 'pointer', marginBottom: 0, display: 'flex', flexDirection: 'column', justifyContent: 'center' }}
+        >
+            <div style={{ fontSize: '2rem', marginBottom: '15px' }}>📺</div>
+            <h3 style={{ margin: 0, color: 'var(--text-main)' }}>Resume Learning</h3>
+            <p style={{ fontSize: '0.9rem', color: 'var(--text-muted)', marginTop: '5px' }}>
+                Find tutorials for {profile?.degree || "your course"}.
+            </p>
         </div>
 
-        {/* WRAPPER DIV 2 */}
-        <div style={{ height: '100%' }}>
-            <Link to="/finance" style={{ textDecoration: 'none', display: 'block', height: '100%' }}>
-                <div className="card" style={{ height: '100%', transition: 'transform 0.2s', cursor: 'pointer', marginBottom: 0 }}>
-                    <div style={{ fontSize: '2rem', marginBottom: '10px' }}>💰</div>
-                    <h3 style={{ margin: 0, color: 'var(--text-main)' }}>Track Expenses</h3>
-                    <p style={{ fontSize: '0.9rem', color: 'var(--text-muted)' }}>
-                        Manage your daily budget.
-                    </p>
-                </div>
-            </Link>
+        <div 
+            className="card" 
+            onClick={() => navigate('/finance')}
+            style={{ height: '100%', cursor: 'pointer', marginBottom: 0, display: 'flex', flexDirection: 'column', justifyContent: 'center' }}
+        >
+            <div style={{ fontSize: '2rem', marginBottom: '15px' }}>💰</div>
+            <h3 style={{ margin: 0, color: 'var(--text-main)' }}>Track Expenses</h3>
+            <p style={{ fontSize: '0.9rem', color: 'var(--text-muted)', marginTop: '5px' }}>
+                Manage your daily budget.
+            </p>
         </div>
 
-        {/* WRAPPER DIV 3 */}
-        <div style={{ height: '100%' }}>
-            <Link to="/planner" style={{ textDecoration: 'none', display: 'block', height: '100%' }}>
-                <div className="card" style={{ height: '100%', transition: 'transform 0.2s', cursor: 'pointer', marginBottom: 0 }}>
-                    <div style={{ fontSize: '2rem', marginBottom: '10px' }}>📅</div>
-                    <h3 style={{ margin: 0, color: 'var(--text-main)' }}>Daily Planner</h3>
-                    <p style={{ fontSize: '0.9rem', color: 'var(--text-muted)' }}>
-                        Check commute and schedule.
-                    </p>
-                </div>
-            </Link>
+        <div 
+            className="card" 
+            onClick={() => navigate('/planner')}
+            style={{ height: '100%', cursor: 'pointer', marginBottom: 0, display: 'flex', flexDirection: 'column', justifyContent: 'center' }}
+        >
+            <div style={{ fontSize: '2rem', marginBottom: '15px' }}>📅</div>
+            <h3 style={{ margin: 0, color: 'var(--text-main)' }}>Daily Planner</h3>
+            <p style={{ fontSize: '0.9rem', color: 'var(--text-muted)', marginTop: '5px' }}>
+                Check commute and schedule.
+            </p>
         </div>
         
       </div>
@@ -67,7 +66,7 @@ export default function Dashboard({ user, profile }) {
             <h3>🎓 Academic Focus</h3>
             <p style={{ color: 'var(--text-muted)' }}>
                 Your current focus is <strong>{profile?.degree || "General Studies"}</strong>. Go to the 
-                <Link to="/skills" style={{ color: 'var(--primary)', marginLeft: '5px' }}>Skill Plan</Link> page 
+                <span onClick={() => navigate('/skills')} style={{ color: 'var(--primary)', marginLeft: '5px', cursor: 'pointer', fontWeight: 'bold' }}>Skill Plan</span> page 
                 to generate a new roadmap for your semester exams.
             </p>
         </div>

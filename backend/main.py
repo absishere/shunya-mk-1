@@ -1,3 +1,4 @@
+import google.generativeai as genai
 import os
 import json
 import re
@@ -19,6 +20,9 @@ from database.database import (
 
 # --- SETUP ---
 load_dotenv()
+GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
+if GEMINI_API_KEY:
+    genai.configure(api_key=GEMINI_API_KEY)
 YOUTUBE_API_KEY = os.getenv("YOUTUBE_API_KEY")
 MAPS_API_KEY = os.getenv("MAPS_API_KEY")
 
@@ -113,10 +117,30 @@ def explain_video(request: VideoRequest):
 # 3. SKILL SYLLABUS GENERATOR (DISABLED SAFELY)
 @app.post("/api/ai/syllabus")
 def generate_syllabus(request: SkillRequest):
-    return {
-        "title": "AI temporarily disabled",
-        "weeks": []
-    }
+    if not GEMINI_API_KEY:
+        return {"title": "Error", "weeks": [{"week": "0", "topic": "API Key Missing", "details": "Please check backend logs."}]}
+
+    model = genai.GenerativeModel("gemini-1.5-flash")
+    prompt = f"""
+    Create a 4-week study syllabus for {request.skill}. 
+    The student is in {request.user_year} of {request.user_degree}.
+    Return ONLY valid JSON in this format:
+    {{
+        "title": "Study Plan for [Skill]",
+        "weeks": [
+            {{"week": "Week 1", "topic": "Topic Name", "details": "What to study..."}},
+            ...
+        ]
+    }}
+    """
+    try:
+        response = model.generate_content(prompt)
+        # Clean up potential markdown formatting from AI
+        clean_text = response.text.replace("```json", "").replace("```", "")
+        return json.loads(clean_text)
+    except Exception as e:
+        print("Gemini Error:", e)
+        return {"title": "Error generating plan", "weeks": []}
 
 
 # 4. FINANCE TRACKER
