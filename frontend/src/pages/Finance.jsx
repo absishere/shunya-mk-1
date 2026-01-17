@@ -10,7 +10,7 @@ export default function Finance({ user }) {
   const fetchExpenses = async () => {
     if (!user) return;
     try {
-      const res = await fetch(`http://localhost:8000/api/finance/expenses?user_id=${user.uid}`);
+      const res = await fetch(`https://shunya-backend-bhi0.onrender.com/api/finance/expenses?user_id=${user.uid}`);
       const data = await res.json();
       setExpenses(data.expenses);
       setTotalSpent(data.total);
@@ -24,7 +24,7 @@ export default function Finance({ user }) {
     if (!amountInput || !user) return;
     setAiAdvice("Analyzing...");
     try {
-      const res = await fetch('http://localhost:8000/api/finance/add', {
+      const res = await fetch('https://shunya-backend-bhi0.onrender.com/api/finance/add', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

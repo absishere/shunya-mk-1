@@ -10,7 +10,7 @@ export default function Skills({ user, profile }) {
     setSyllabusLoading(true);
     setSyllabus(null);
     try {
-      const res = await fetch('http://localhost:8000/api/ai/syllabus', {
+      const res = await fetch('https://shunya-backend-bhi0.onrender.com/api/ai/syllabus', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

@@ -12,7 +12,7 @@ export default function Planner({ user }) {
     if (!user) return;
     setScheduleLoading(true);
     try {
-      const res = await fetch('http://localhost:8000/api/scheduler/generate', {
+      const res = await fetch('https://shunya-backend-bhi0.onrender.com/api/scheduler/generate', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

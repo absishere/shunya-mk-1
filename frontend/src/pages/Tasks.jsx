@@ -9,7 +9,7 @@ export default function Tasks({ user }) {
   const fetchTasks = async () => {
     if (!user) return;
     try {
-      const res = await fetch(`http://localhost:8000/api/assignments?user_id=${user.uid}`);
+      const res = await fetch(`https://shunya-backend-bhi0.onrender.com/api/assignments?user_id=${user.uid}`);
       const data = await res.json();
       setSavedTasks(data.assignments || []);
     } catch (e) { console.error(e); }
@@ -22,7 +22,7 @@ export default function Tasks({ user }) {
     if (!rawText || !user) return;
     setParsing(true);
     try {
-      const res = await fetch('http://localhost:8000/api/ai/parse-assignment', {
+      const res = await fetch('https://shunya-backend-bhi0.onrender.com/api/ai/parse-assignment', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ text: rawText, user_id: user.uid })

@@ -14,7 +14,7 @@ export default function Learning({ user, profile }) {
     if (!query) return;
     setLoading(true);
     try {
-      const res = await fetch(`http://localhost:8000/api/youtube/search?query=${query}`);
+      const res = await fetch(`https://shunya-backend-bhi0.onrender.com/api/youtube/search?query=${query}`);
       const data = await res.json();
       setVideos(data.videos || []);
       setActiveSummary(null);
@@ -26,7 +26,7 @@ export default function Learning({ user, profile }) {
     setSummaryLoading(videoId);
     setActiveSummary(null);
     try {
-      const res = await fetch('http://localhost:8000/api/ai/explain', {
+      const res = await fetch('https://shunya-backend-bhi0.onrender.com/api/ai/explain', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ title, channel })
