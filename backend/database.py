@@ -180,3 +180,27 @@ def get_assignments(user_id: str):
     )
 
     return [doc.to_dict() for doc in assignments_ref]
+
+# =========================
+# REMOVE SAVED YOUTUBE VIDEO
+# =========================
+
+def remove_saved_video(user_id: str, youtube_id: str):
+    """
+    Removes a saved YouTube video from user's playlist
+    """
+    videos_ref = (
+        db.collection("users")
+        .document(user_id)
+        .collection("saved_videos")
+        .where("youtube_id", "==", youtube_id)
+        .stream()
+    )
+
+    deleted = False
+    for doc in videos_ref:
+        doc.reference.delete()
+        deleted = True
+
+    return deleted
+
